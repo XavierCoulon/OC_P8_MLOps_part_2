@@ -1,0 +1,14 @@
+[project]
+name = "oc-p8-rugby-mlops"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "black>=25.11.0",
+    "fastapi>=0.123.4",
+    "flake8>=7.3.0",
+    "isort>=7.0.0",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.1",
+]
