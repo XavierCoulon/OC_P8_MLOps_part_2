@@ -29,7 +29,8 @@ repos:
           - id: pytest
             name: pytest
             entry: pytest
-            language: system
+            language: python
             types: [python]
             stages: [pre-commit]
             pass_filenames: false
+            additional_dependencies: ["pytest", "pytest-cov"]
