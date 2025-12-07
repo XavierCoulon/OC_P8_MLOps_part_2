@@ -1,0 +1,49 @@
+services:
+    # PostgreSQL Database
+    postgres:
+        image: postgres:16-alpine
+        container_name: rugby_mlops_db
+        environment:
+            POSTGRES_USER: admin
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: rugby_kicks_db
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U admin"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - rugby_network
+
+    # FastAPI Application
+    api:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: rugby_mlops_api
+        env_file: .env
+        ports:
+            - "8000:8000"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        volumes:
+            - ./app:/app/app
+            - huggingface_cache:/root/.cache/huggingface
+        networks:
+            - rugby_network
+        restart: unless-stopped
+
+volumes:
+    postgres_data:
+        driver: local
+    huggingface_cache:
+        driver: local
+
+networks:
+    rugby_network:
+        driver: bridge
