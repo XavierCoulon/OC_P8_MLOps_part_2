@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
     api_prefix: str = "/api/v1"
+    api_key: str = ""
     hf_repo_id: str = ""
     database_url: str = ""
 
