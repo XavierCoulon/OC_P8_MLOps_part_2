@@ -6,52 +6,68 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+# Configure test settings BEFORE importing app modules
 from app.config.settings import Settings
-from app.db.database import get_session
-from app.db.models import Base
-from app.main import app
+
+test_settings = Settings(
+    app_name="Rugby MLOps Test",
+    app_version="0.1.0",
+    debug=True,
+    api_prefix="/api/v1",
+    api_key="test-api-key-12345",
+    hf_repo_id="XavierCoulon/rugby-kicks-model",
+    database_url="sqlite:///:memory:",
+)
+
+# Create test engine
+test_engine = create_engine(
+    test_settings.database_url,
+    connect_args={"check_same_thread": False},
+)
+
+# Import database module and override settings
+import app.db.database as db_module  # noqa: E402
+from app.db.database import get_session  # noqa: E402
+from app.db.models import Base  # noqa: E402
+from app.main import app  # noqa: E402
+
+db_module._engine = test_engine
+db_module._SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=test_engine,
+)
+
+# Now safe to import app and models
+Base.metadata.create_all(bind=test_engine)
 
 
 @pytest.fixture(scope="session")
-def test_settings() -> Settings:
-    """Create test settings with SQLite database."""
-    return Settings(
-        app_name="Rugby MLOps Test",
-        app_version="0.1.0",
-        debug=True,
-        api_prefix="/api/v1",
-        api_key="test-api-key-12345",
-        hf_repo_id="XavierCoulon/rugby-kicks-model",
-        database_url="sqlite:///:memory:",
-    )
+def test_settings_fixture() -> Settings:
+    """Provide test settings."""
+    return test_settings
 
 
 @pytest.fixture(scope="session")
-def test_db_engine(test_settings):
-    """Create test database engine."""
-    engine = create_engine(
-        test_settings.database_url,
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(bind=engine)
-    yield engine
-    Base.metadata.drop_all(bind=engine)
+def test_db_engine():
+    """Provide test database engine."""
+    yield test_engine
 
 
 @pytest.fixture(scope="session")
-def test_session_local(test_db_engine):
-    """Create test session factory."""
+def test_session_local():
+    """Provide test session factory."""
     return sessionmaker(
         autocommit=False,
         autoflush=False,
-        bind=test_db_engine,
+        bind=test_engine,
     )
 
 
 @pytest.fixture
 def test_db(test_session_local) -> Generator[Session, None, None]:
     """Create test database session."""
-    connection = test_session_local.kw["bind"].connect()
+    connection = test_engine.connect()
     transaction = connection.begin()
     session = test_session_local(bind=connection)
 
@@ -63,7 +79,7 @@ def test_db(test_session_local) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(test_db, test_settings):
+def client(test_db):
     """Create test client with dependency overrides."""
 
     def override_get_session():
