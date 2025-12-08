@@ -1,5 +1,5 @@
 # Development commands
-.PHONY: up down rebuild precommit test coverage
+.PHONY: up down rebuild precommit test coverage ui
 
 # Docker commands
 up:
@@ -24,3 +24,7 @@ test:
 # covergage report
 coverage:
 	pytest --cov=app --cov-report=term-missing --cov-report=html
+
+# Launch Gradio UI
+ui:
+	python gradio_app.py
