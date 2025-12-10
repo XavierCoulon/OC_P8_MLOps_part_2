@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Deploy Docker Image
 
 on:
     push:
@@ -7,7 +7,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    build-and-push:
+    build-and-deploy:
         runs-on: ubuntu-latest
 
         steps:
@@ -43,7 +43,7 @@ jobs:
                       type=semver,pattern={{major}}.{{minor}}
                       type=sha,prefix={{branch}}-
 
-            - name: Build and push Docker image
+            - name: Build and push to Docker Hub
               uses: docker/build-push-action@v5
               timeout-minutes: 60
               with:
@@ -53,3 +53,31 @@ jobs:
                   labels: ${{ steps.meta.outputs.labels }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
+
+            - name: 🚀 Push to Hugging Face Space
+              if: github.ref == 'refs/heads/main'
+              env:
+                  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+              run: |
+                  echo "📦 Installing Hugging Face Hub..."
+                  pip install -U huggingface_hub
+
+                  echo "🚀 Uploading code to Space..."
+                  python -c "
+                  from huggingface_hub import HfApi
+                  import os
+
+                  api = HfApi(token=os.environ['HF_TOKEN'])
+
+                  # Upload all files to the space
+                  api.upload_folder(
+                      folder_path='.',
+                      repo_id='XavierCoulon/RugbyMLOps',
+                      repo_type='space',
+                      commit_message='🚀 Auto-deploy from GitHub Actions',
+                      ignore_patterns=['.git*', '__pycache__*', '*.pyc', '.pytest_cache*', 'node_modules*', '.venv*', '.env']
+                  )
+                  print('✅ Upload completed!')
+                  "
+
+                  echo "✅ Deployment to Hugging Face Space completed!"
