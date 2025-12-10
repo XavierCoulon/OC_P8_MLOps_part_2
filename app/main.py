@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from gradio.routes import mount_gradio_app
 
 from app.api.routes import health, predictions
 from app.config.settings import settings
@@ -64,6 +65,16 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router, prefix=settings.api_prefix)
     app.include_router(predictions.router, prefix=settings.api_prefix)
+
+    # Mount Gradio interface on /
+    try:
+        from gradio_app import build_interface
+
+        demo = build_interface()
+        app = mount_gradio_app(app, demo, path="/")
+        logger.info("Gradio interface mounted on /")
+    except Exception as e:
+        logger.warning(f"Failed to mount Gradio interface: {e}")
 
     return app
 
