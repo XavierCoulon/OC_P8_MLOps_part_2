@@ -837,6 +837,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "gradio" },
+    { name = "gradio-client" },
     { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "joblib" },
@@ -869,6 +870,7 @@ requires-dist = [
     { name = "fastapi-cli", marker = "extra == 'dev'", specifier = ">=0.0.4" },
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=7.3.0" },
     { name = "gradio", specifier = ">=5.23.1" },
+    { name = "gradio-client", specifier = ">=1.8.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", specifier = ">=0.16.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=7.0.0" },
