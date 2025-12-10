@@ -33,4 +33,20 @@ repos:
             types: [python]
             stages: [pre-commit]
             pass_filenames: false
-            additional_dependencies: ["pytest", "pytest-cov"]
+            additional_dependencies:
+                - pytest
+                - pytest-cov
+                - fastapi
+                - sqlalchemy
+                - pydantic
+                - pydantic-settings
+                - gradio
+                - scikit-learn
+                - pandas
+                - numpy
+                - joblib
+                - requests
+                - httpx
+                - uvicorn
+                - psycopg
+                - huggingface-hub
