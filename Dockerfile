@@ -31,14 +31,23 @@ COPY . .
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    HOME=/home/user \
+    PYTHONPATH=/app
+
+# Create user with proper permissions (for HF Spaces)
+RUN useradd -m -u 1000 user
+RUN chown -R user:user /app
+
+# Switch to user
+USER user
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/api/v1/health')" || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:7860/api/v1/health')" || exit 1
 
-# Expose port
-EXPOSE 8000
+# Expose port (7860 for HF Spaces)
+EXPOSE 7860
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Initialize database and run application
+CMD ["sh", "-c", "python -m app.db.init_db && uvicorn app.main:app --host 0.0.0.0 --port 7860"]

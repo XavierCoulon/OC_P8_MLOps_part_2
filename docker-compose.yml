@@ -27,13 +27,13 @@ services:
         container_name: rugby_mlops_api
         env_file: .env
         ports:
-            - "8000:8000"
+            - "7860:7860"
         depends_on:
             postgres:
                 condition: service_healthy
         volumes:
             - ./app:/app/app
-            - huggingface_cache:/root/.cache/huggingface
+            - huggingface_cache:/home/user/.cache/huggingface
         networks:
             - rugby_network
         restart: unless-stopped
