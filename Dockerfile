@@ -33,11 +33,16 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     HOME=/home/user \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    HF_HOME=/home/user/.cache/huggingface
 
 # Create user with proper permissions (for HF Spaces)
 RUN useradd -m -u 1000 user
 RUN chown -R user:user /app
+
+# Create HuggingFace cache directory with proper permissions
+RUN mkdir -p /home/user/.cache/huggingface && \
+    chown -R user:user /home/user/.cache
 
 # Switch to user
 USER user
@@ -50,4 +55,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 EXPOSE 7860
 
 # Initialize database and run application
-CMD ["sh", "-c", "python -m app.db.init_db && uvicorn app.main:app --host 0.0.0.0 --port 7860"]
+CMD ["sh", "-c", "sleep 5 && python -m app.db.init_db && uvicorn app.main:app --host 0.0.0.0 --port 7860"]

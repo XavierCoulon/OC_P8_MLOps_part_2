@@ -1,13 +1,23 @@
 """Pytest configuration and shared fixtures."""
+import sys
 from typing import Generator
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-# Configure test settings BEFORE importing app modules
-from app.config.settings import Settings
+# Mock psutil BEFORE any app imports
+psutil_mock = MagicMock()
+psutil_mock.Process.return_value.cpu_percent.return_value = 10.5
+psutil_mock.Process.return_value.memory_info.return_value = MagicMock(
+    rss=104857600
+)  # 100 MB
+sys.modules["psutil"] = psutil_mock
+
+# Now safe to import app modules
+from app.config.settings import Settings  # noqa: E402
 
 test_settings = Settings(
     app_name="Rugby MLOps Test",

@@ -1,5 +1,6 @@
 """CRUD operations for prediction inputs."""
 
+import psutil
 from sqlalchemy.orm import Session
 
 from app.db.models import PredictionInput
@@ -11,6 +12,7 @@ def create_prediction_input(
     request: KickPredictionRequest,
     prediction: float,
     confidence: float,
+    latency_ms: float | None = None,
 ) -> PredictionInput:
     """Create a new prediction input record in the database.
 
@@ -19,10 +21,17 @@ def create_prediction_input(
         request: Prediction request data
         prediction: Model prediction value
         confidence: Model confidence value
+        latency_ms: Prediction latency in milliseconds
 
     Returns:
         Created PredictionInput record
     """
+    # Get system metrics using psutil
+    process = psutil.Process()
+    cpu_usage = process.cpu_percent(interval=0.1)
+    memory_info = process.memory_info()
+    memory_mb = memory_info.rss / 1024 / 1024  # Convert bytes to MB
+
     db_prediction = PredictionInput(
         time_norm=request.time_norm,
         distance=request.distance,
@@ -37,6 +46,9 @@ def create_prediction_input(
         has_previous_attempts=request.has_previous_attempts,
         prediction=prediction,
         confidence=confidence,
+        latency_ms=latency_ms,
+        cpu_usage_percent=cpu_usage,
+        memory_usage_mb=memory_mb,
     )
     session.add(db_prediction)
     session.commit()
