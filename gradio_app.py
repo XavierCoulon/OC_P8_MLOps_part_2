@@ -3,11 +3,15 @@
 
 import argparse
 import logging
+import time
 
 import gradio as gr
 
 from app.config.settings import settings
+from app.db.crud import create_prediction_input
+from app.db.database import _get_session_local
 from app.ml.model_manager import model_manager
+from app.models.schemas import KickPredictionRequest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -115,7 +119,7 @@ def create_input_component(feature: str):
 
 
 def predict_from_ui(**kwargs) -> tuple[str, str]:
-    """Effectue une prédiction via le modèle directement.
+    """Effectue une prédiction via le modèle directement et sauvegarde en BD.
 
     Args:
         **kwargs: Paramètres du tir
@@ -127,7 +131,29 @@ def predict_from_ui(**kwargs) -> tuple[str, str]:
         if not model_manager.initialized:
             raise RuntimeError("Modèle non chargé. Veuillez démarrer l'app.")
 
+        # Measure latency
+        start_time = time.time()
         prediction, confidence = model_manager.predict(kwargs)
+        latency_ms = (time.time() - start_time) * 1000
+
+        # Try to save to database
+        try:
+            SessionLocal = _get_session_local()
+            session = SessionLocal()
+            request = KickPredictionRequest(**kwargs)
+            create_prediction_input(
+                session=session,
+                request=request,
+                prediction=prediction,
+                confidence=confidence,
+                latency_ms=latency_ms,
+            )
+            session.commit()
+            session.close()
+        except Exception as db_error:
+            logger.warning(f"Failed to save prediction to database: {str(db_error)}")
+            # Don't fail the prediction, just log the warning
+
         pred_str = f"{prediction:.4f}"
         conf_str = f"{confidence:.4f}"
         return pred_str, conf_str

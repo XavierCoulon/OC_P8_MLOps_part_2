@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures."""
+
 import sys
 from typing import Generator
 from unittest.mock import MagicMock
