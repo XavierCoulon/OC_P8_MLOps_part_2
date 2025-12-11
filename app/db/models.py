@@ -26,6 +26,9 @@ class PredictionInput(Base):
     has_previous_attempts = Column(Integer, nullable=False)
     prediction = Column(Float, nullable=True)
     confidence = Column(Float, nullable=True)
+    latency_ms = Column(Float, nullable=True)
+    cpu_usage_percent = Column(Float, nullable=True)
+    memory_usage_mb = Column(Float, nullable=True)
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
