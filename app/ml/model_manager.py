@@ -1,11 +1,19 @@
 """Model manager for loading and using Hugging Face models."""
 
 import logging
+import warnings
 from typing import Optional
 
 import joblib
 import pandas as pd
 from huggingface_hub import hf_hub_download
+
+# Suppress scikit-learn feature names warning
+warnings.filterwarnings(
+    "ignore",
+    message="X does not have valid feature names",
+    category=UserWarning,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +115,11 @@ class ModelManager:
             "has_previous_attempts",
         ]
 
-        # Create DataFrame from features
-        return pd.DataFrame([{f: features.get(f, 0) for f in feature_order}])
+        # Create DataFrame from features with explicit column names
+        df = pd.DataFrame([{f: features.get(f, 0) for f in feature_order}])
+        # Ensure column order matches what the model expects
+        df = df[feature_order]
+        return df
 
 
 # Global instance
