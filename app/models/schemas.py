@@ -1,5 +1,7 @@
 """Pydantic models and schemas."""
 
+from datetime import datetime
+
 from pydantic import BaseModel
 from pydantic.fields import Field
 
@@ -119,3 +121,28 @@ class KickPredictionResponse(BaseModel):
     model_config = {
         "json_schema_extra": {"example": {"prediction": 0.75, "confidence": 0.92}}
     }
+
+
+class PredictionInputResponse(BaseModel):
+    """Full prediction input record with all attributes."""
+
+    id: int
+    time_norm: float
+    distance: int
+    angle: int
+    wind_speed: float
+    precipitation_probability: float
+    is_left_footed: int
+    game_away: int
+    is_endgame: int
+    is_start: int
+    is_left_side: int
+    has_previous_attempts: int
+    prediction: float
+    confidence: float
+    latency_ms: float | None = None
+    cpu_usage_percent: float | None = None
+    memory_usage_mb: float | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
