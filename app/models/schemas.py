@@ -143,6 +143,8 @@ class PredictionInputResponse(BaseModel):
     latency_ms: float | None = None
     cpu_usage_percent: float | None = None
     memory_usage_mb: float | None = None
+    status_code: int | None = None
+    error_message: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

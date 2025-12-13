@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Float, Integer
+from sqlalchemy import Column, DateTime, Float, Integer, String
 
 from app.db.database import Base
 
@@ -29,6 +29,8 @@ class PredictionInput(Base):
     latency_ms = Column(Float, nullable=True)
     cpu_usage_percent = Column(Float, nullable=True)
     memory_usage_mb = Column(Float, nullable=True)
+    status_code = Column(Integer, nullable=True, default=200)
+    error_message = Column(String, nullable=True)
     created_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
