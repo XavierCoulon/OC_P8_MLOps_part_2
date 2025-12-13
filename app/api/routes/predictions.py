@@ -1,29 +1,22 @@
 """Kick prediction routes."""
 
-import os
-import time
-
-import psutil
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.crud import (
-    create_prediction_input,
     delete_prediction_input,
     get_prediction_input,
     list_prediction_inputs,
 )
 from app.db.database import SessionDep
-from app.ml.model_manager import model_manager
 from app.models.schemas import (
     KickPredictionRequest,
     KickPredictionResponse,
     PredictionInputResponse,
 )
 from app.security.auth import verify_api_key
+from app.services import process_prediction
 
 router = APIRouter(tags=["predictions"])
-
-process = psutil.Process(os.getpid())
 
 
 @router.post("/predict", response_model=KickPredictionResponse)
@@ -42,56 +35,17 @@ async def predict_kick(
         Prediction probability and confidence score
     """
 
-    start_time = time.time()
-    process.cpu_percent(interval=None)
-    prediction = None
-    confidence = None
-    status_code = 200
-    error_message = None
-
     try:
-        if not model_manager.initialized:
-            raise HTTPException(
-                status_code=503,
-                detail="Model not loaded. Service unavailable.",
-            )
-
-        # Convert request to dictionary
-        features = request.model_dump()
-
-        prediction, confidence = model_manager.predict(features)
+        prediction, confidence = process_prediction(session, request)
 
         return KickPredictionResponse(
             prediction=prediction,
             confidence=confidence,
         )
-    except HTTPException as he:
-        status_code = he.status_code
-        error_message = he.detail
-        raise he
     except Exception as e:
-        status_code = 500
-        error_message = str(e)
         raise HTTPException(
             status_code=500,
-            detail=f"Prediction failed: {str(e)}",
-        )
-    finally:
-        latency_ms = (time.time() - start_time) * 1000  # Convert to milliseconds
-        cpu_usage = process.cpu_percent(interval=None)
-        memory_mb = process.memory_info().rss / 1024 / 1024  # Convert bytes to MB
-
-        # Save to database
-        create_prediction_input(
-            session=session,
-            request=request,
-            prediction=prediction,
-            confidence=confidence,
-            latency_ms=latency_ms,
-            cpu_usage_percent=cpu_usage,
-            memory_usage_mb=memory_mb,
-            status_code=status_code,
-            error_message=error_message,
+            detail=str(e),
         )
 
 
