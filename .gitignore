@@ -65,3 +65,6 @@ Thumbs.db
 # Project specific
 .env
 .env.local
+
+# Data folders
+data/
