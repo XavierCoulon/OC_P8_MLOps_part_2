@@ -1,7 +1,9 @@
 """Kick prediction routes."""
 
+import os
 import time
 
+import psutil
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.crud import (
@@ -21,6 +23,8 @@ from app.security.auth import verify_api_key
 
 router = APIRouter(tags=["predictions"])
 
+process = psutil.Process(os.getpid())
+
 
 @router.post("/predict", response_model=KickPredictionResponse)
 async def predict_kick(
@@ -37,6 +41,14 @@ async def predict_kick(
     Returns:
         Prediction probability and confidence score
     """
+
+    start_time = time.time()
+    process.cpu_percent(interval=None)
+    prediction = None
+    confidence = None
+    status_code = 200
+    error_message = None
+
     try:
         if not model_manager.initialized:
             raise HTTPException(
@@ -47,10 +59,27 @@ async def predict_kick(
         # Convert request to dictionary
         features = request.model_dump()
 
-        # Measure prediction latency
-        start_time = time.time()
         prediction, confidence = model_manager.predict(features)
-        latency_ms = (time.time() - start_time) * 1000
+
+        return KickPredictionResponse(
+            prediction=prediction,
+            confidence=confidence,
+        )
+    except HTTPException as he:
+        status_code = he.status_code
+        error_message = he.detail
+        raise he
+    except Exception as e:
+        status_code = 500
+        error_message = str(e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}",
+        )
+    finally:
+        latency_ms = (time.time() - start_time) * 1000  # Convert to milliseconds
+        cpu_usage = process.cpu_percent(interval=None)
+        memory_mb = process.memory_info().rss / 1024 / 1024  # Convert bytes to MB
 
         # Save to database
         create_prediction_input(
@@ -59,19 +88,10 @@ async def predict_kick(
             prediction=prediction,
             confidence=confidence,
             latency_ms=latency_ms,
-        )
-
-        return KickPredictionResponse(
-            prediction=prediction,
-            confidence=confidence,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Prediction failed: {str(e)}",
+            cpu_usage_percent=cpu_usage,
+            memory_usage_mb=memory_mb,
+            status_code=status_code,
+            error_message=error_message,
         )
 
 
@@ -99,7 +119,7 @@ async def get_prediction(
 async def list_predictions(
     session: SessionDep,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000,
 ):
     """List all prediction records.
 

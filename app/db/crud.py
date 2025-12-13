@@ -1,6 +1,5 @@
 """CRUD operations for prediction inputs."""
 
-import psutil
 from sqlalchemy.orm import Session
 
 from app.db.models import PredictionInput
@@ -10,9 +9,13 @@ from app.models.schemas import KickPredictionRequest
 def create_prediction_input(
     session: Session,
     request: KickPredictionRequest,
-    prediction: float,
-    confidence: float,
-    latency_ms: float | None = None,
+    prediction: float | None,
+    confidence: float | None,
+    latency_ms: float,
+    cpu_usage_percent: float,
+    memory_usage_mb: float,
+    status_code: int,
+    error_message: str | None,
 ) -> PredictionInput:
     """Create a new prediction input record in the database.
 
@@ -22,15 +25,14 @@ def create_prediction_input(
         prediction: Model prediction value
         confidence: Model confidence value
         latency_ms: Prediction latency in milliseconds
+        cpu_usage_percent: CPU usage percentage at prediction time
+        memory_usage_mb: Memory usage in MB at prediction time
+        status_code: HTTP status code of the prediction request
+        error_message: Error message if any
 
     Returns:
         Created PredictionInput record
     """
-    # Get system metrics using psutil
-    process = psutil.Process()
-    cpu_usage = process.cpu_percent(interval=0.1)
-    memory_info = process.memory_info()
-    memory_mb = memory_info.rss / 1024 / 1024  # Convert bytes to MB
 
     db_prediction = PredictionInput(
         time_norm=request.time_norm,
@@ -47,8 +49,10 @@ def create_prediction_input(
         prediction=prediction,
         confidence=confidence,
         latency_ms=latency_ms,
-        cpu_usage_percent=cpu_usage,
-        memory_usage_mb=memory_mb,
+        cpu_usage_percent=cpu_usage_percent,
+        memory_usage_mb=memory_usage_mb,
+        status_code=status_code,
+        error_message=error_message,
     )
     session.add(db_prediction)
     session.commit()
