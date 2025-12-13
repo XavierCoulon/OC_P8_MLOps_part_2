@@ -1,17 +1,17 @@
 """Gradio app launcher for rugby kick prediction."""
+
 # flake8: noqa=E231
 
 import argparse
 import logging
-import time
 
 import gradio as gr
 
 from app.config.settings import settings
-from app.db.crud import create_prediction_input
 from app.db.database import _get_session_local
 from app.ml.model_manager import model_manager
 from app.models.schemas import KickPredictionRequest
+from app.services import process_prediction
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -127,40 +127,25 @@ def predict_from_ui(**kwargs) -> tuple[str, str]:
     Returns:
         Tuple (prédiction, confiance)
     """
+    # Création session manuelle (spécifique à Gradio)
+    SessionLocal = _get_session_local()
+    session = SessionLocal()
+
     try:
-        if not model_manager.initialized:
-            raise RuntimeError("Modèle non chargé. Veuillez démarrer l'app.")
+        # Conversion en Pydantic (validation gratuite !)
+        request = KickPredictionRequest(**kwargs)
 
-        # Measure latency
-        start_time = time.time()
-        prediction, confidence = model_manager.predict(kwargs)
-        latency_ms = (time.time() - start_time) * 1000
+        # Appel du service partagé
+        prediction, confidence = process_prediction(session, request)
 
-        # Try to save to database
-        try:
-            SessionLocal = _get_session_local()
-            session = SessionLocal()
-            request = KickPredictionRequest(**kwargs)
-            create_prediction_input(
-                session=session,
-                request=request,
-                prediction=prediction,
-                confidence=confidence,
-                latency_ms=latency_ms,
-            )
-            session.commit()
-            session.close()
-        except Exception as db_error:
-            logger.warning(f"Failed to save prediction to database: {str(db_error)}")
-            # Don't fail the prediction, just log the warning
-
-        pred_str = f"{prediction:.4f}"
-        conf_str = f"{confidence:.4f}"
-        return pred_str, conf_str
+        return f"{prediction:.4f}", f"{confidence:.4f}"
 
     except Exception as e:
-        logger.error(f"Erreur de prédiction: {str(e)}")
-        return "Erreur", f"Erreur: {str(e)}"
+        logger.error(f"Erreur UI: {e}")
+        return "Erreur", str(e)
+
+    finally:
+        session.close()  # Toujours fermer la session manuelle
 
 
 def predict_wrapper(*args) -> tuple[str, dict]:
