@@ -1,5 +1,6 @@
 """Pytest configuration and shared fixtures."""
 
+import os
 import sys
 from typing import Generator
 from unittest.mock import MagicMock
@@ -8,6 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+# Disable profiling in tests
+os.environ["TESTING"] = "true"
 
 # Mock psutil BEFORE any app imports
 psutil_mock = MagicMock()

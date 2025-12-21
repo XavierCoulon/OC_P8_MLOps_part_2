@@ -54,6 +54,7 @@ htmlcov/
 # Logging
 *.log
 app.log
+profiles/
 
 # FastAPI and Uvicorn
 .uvicorn_cache/
