@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     api_key: str = ""
     hf_repo_id: str = ""
+    hf_api_uri: str = ""
+    evidently_cloud_token: str = ""
+    evidently_project_id: str = ""
+    evidently_api_key: str = ""
     database_url: str = ""
 
 
