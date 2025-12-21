@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,6 +10,7 @@ from gradio.routes import mount_gradio_app
 from app.api.routes import health, predictions
 from app.config.settings import settings
 from app.db.database import create_db_and_tables
+from app.middleware.profiling import ProfilingMiddleware
 from app.ml.model_manager import model_manager
 from app.utils.logger import logger
 
@@ -61,6 +63,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Add profiling middleware (only in debug mode, not in tests)
+    if settings.debug and not os.getenv("TESTING"):
+        app.add_middleware(ProfilingMiddleware, top_results=50, save_binary=True)
+        logger.info("🔍 Profiling middleware enabled (debug mode)")
 
     # Include routers
     app.include_router(health.router, prefix=settings.api_prefix)
