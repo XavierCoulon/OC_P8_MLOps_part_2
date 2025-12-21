@@ -1,5 +1,5 @@
 # Development commands
-.PHONY: up down rebuild precommit test coverage ui
+.PHONY: up down rebuild precommit test coverage ui batch evaluate
 
 # Docker commands
 up:
@@ -28,3 +28,11 @@ coverage:
 # Launch Gradio UI
 ui:
 	python gradio_app.py
+
+# Send batch predictions to API
+batch:
+	python scripts/batch_prediction.py
+
+# Evaluate data drift
+evaluate:
+	python scripts/evaluate_drift.py

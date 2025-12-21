@@ -7,7 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL = "https://xaviercoulon-rugbymlops.hf.space/api/v1/predict"
+HF_API_URI = os.getenv("HF_API_URI")
+if not HF_API_URI:
+    print("❌ Erreur : L'URL de l'API Hugging Face n'est pas définie.")
+    print("Définis HF_API_URI dans le fichier .env avant de lancer le script.")
+    exit()
+HF_API_PREDICT_ENDPOINT = f"{HF_API_URI}/predict"
 API_KEY = os.getenv("API_KEY", "default-key-change-me")
 
 if not API_KEY or API_KEY == "default-key-change-me":
@@ -34,7 +39,7 @@ batch = df.sample(n=BATCH_SIZE)
 batch = batch.drop(columns="resultat")
 
 print(f"✨ Données nettoyées. Colonnes envoyées : {list(batch.columns)}")
-print(f"🚀 Démarrage de l'envoi vers {API_URL}...")
+print(f"🚀 Démarrage de l'envoi vers {HF_API_PREDICT_ENDPOINT}...")
 print("-" * 50)
 
 headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
@@ -49,7 +54,7 @@ payloads = batch.to_dict(orient="records")
 for i, payload in enumerate(payloads):
     try:
         # Envoi de la requête POST
-        response = requests.post(API_URL, json=payload, headers=headers)
+        response = requests.post(HF_API_PREDICT_ENDPOINT, json=payload, headers=headers)
 
         # Analyse de la réponse
         if response.status_code == 200:
