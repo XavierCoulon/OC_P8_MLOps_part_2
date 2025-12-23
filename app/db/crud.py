@@ -111,7 +111,7 @@ def delete_prediction_input(session: Session, prediction_id: int) -> bool:
         .first()
     )
 
-    if db_prediction:
+    if db_prediction is not None:
         session.delete(db_prediction)
         session.commit()
         return True
