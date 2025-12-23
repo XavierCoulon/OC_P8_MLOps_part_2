@@ -1,8 +1,10 @@
 """Database ORM models using SQLAlchemy."""
 
 from datetime import datetime, timezone
+from typing import Optional
 
-from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy import DateTime, Float, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
 
@@ -12,26 +14,28 @@ class PredictionInput(Base):
 
     __tablename__ = "prediction_inputs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    time_norm = Column(Float, nullable=False)
-    distance = Column(Integer, nullable=False)
-    angle = Column(Integer, nullable=False)
-    wind_speed = Column(Float, nullable=False)
-    precipitation_probability = Column(Float, nullable=False)
-    is_left_footed = Column(Integer, nullable=False)
-    game_away = Column(Integer, nullable=False)
-    is_endgame = Column(Integer, nullable=False)
-    is_start = Column(Integer, nullable=False)
-    is_left_side = Column(Integer, nullable=False)
-    has_previous_attempts = Column(Integer, nullable=False)
-    prediction = Column(Float, nullable=True)
-    confidence = Column(Float, nullable=True)
-    latency_ms = Column(Float, nullable=True)
-    cpu_usage_percent = Column(Float, nullable=True)
-    memory_usage_mb = Column(Float, nullable=True)
-    status_code = Column(Integer, nullable=True, default=200)
-    error_message = Column(String, nullable=True)
-    created_at = Column(
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    time_norm: Mapped[float] = mapped_column(Float, nullable=False)
+    distance: Mapped[int] = mapped_column(Integer, nullable=False)
+    angle: Mapped[int] = mapped_column(Integer, nullable=False)
+    wind_speed: Mapped[float] = mapped_column(Float, nullable=False)
+    precipitation_probability: Mapped[float] = mapped_column(Float, nullable=False)
+    is_left_footed: Mapped[int] = mapped_column(Integer, nullable=False)
+    game_away: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_endgame: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_left_side: Mapped[int] = mapped_column(Integer, nullable=False)
+    has_previous_attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+    prediction: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    latency_ms: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    cpu_usage_percent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    memory_usage_mb: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    status_code: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=200
+    )
+    error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
