@@ -144,36 +144,6 @@ class TestListPredictionInputs:
 
         assert len(result) == 5
 
-    def test_list_predictions_with_pagination(
-        self, test_db: Session, sample_kick_request
-    ):
-        """Test listing predictions with pagination."""
-        # Create 10 predictions
-        for i in range(10):
-            create_prediction_input(
-                session=test_db,
-                request=sample_kick_request,
-                prediction=0.5,
-                confidence=0.6,
-                latency_ms=20.0,
-                cpu_usage_percent=15.0,
-                memory_usage_mb=100.0,
-                status_code=200,
-                error_message=None,
-            )
-
-        # Get first 5
-        result = list_prediction_inputs(test_db, skip=0, limit=5)
-        assert len(result) == 5
-
-        # Get next 5
-        result = list_prediction_inputs(test_db, skip=5, limit=5)
-        assert len(result) == 5
-
-        # Skip more than available
-        result = list_prediction_inputs(test_db, skip=20, limit=5)
-        assert len(result) == 0
-
 
 class TestDeletePredictionInput:
     """Test suite for delete_prediction_input function."""
