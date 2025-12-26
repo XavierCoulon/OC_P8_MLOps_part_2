@@ -1,6 +1,6 @@
 """Kick prediction routes."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.db.crud import (
     delete_prediction_input,
@@ -23,6 +23,7 @@ router = APIRouter(tags=["predictions"])
 async def predict_kick(
     request: KickPredictionRequest,
     session: SessionDep,
+    background_tasks: BackgroundTasks,  # <--- 2. Injection par FastAPI
     _: str = Depends(verify_api_key),
 ):
     """Predict rugby kick success probability.
@@ -30,13 +31,15 @@ async def predict_kick(
     Args:
         request: Kick features for prediction
         session: Database session
+        background_tasks: Handler for async operations
 
     Returns:
         Prediction probability and confidence score
     """
 
     try:
-        prediction, confidence = process_prediction(session, request)
+        # 3. On passe l'outil de background au service
+        prediction, confidence = process_prediction(session, request, background_tasks)
 
         return KickPredictionResponse(
             prediction=prediction,
