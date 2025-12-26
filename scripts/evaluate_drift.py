@@ -80,15 +80,11 @@ def load_reference_data(file_path: str) -> pd.DataFrame:
     return df[FEATURE_COLUMNS + ["resultat"]]
 
 
-def fetch_production_data(
-    api_url: str | None, api_key: str, limit: int = 1000
-) -> pd.DataFrame:
+def fetch_production_data(api_key: str) -> pd.DataFrame:
     """Fetch production predictions from API (Neon database via Hugging Face).
 
     Args:
-        api_url: Base API URL (e.g., Hugging Face Space endpoint)
         api_key: API key for authentication
-        limit: Maximum number of records to fetch
 
     Returns:
         DataFrame with production data
@@ -107,7 +103,6 @@ def fetch_production_data(
         response = requests.get(
             HF_API_PREDICTIONS_ENDPOINT,
             headers=headers,
-            params={"limit": limit, "skip": 0},
             timeout=30,
         )
         response.raise_for_status()
@@ -271,7 +266,7 @@ def main():
 
         # Step 2: Fetch production data from Neon (via API)
         logger.info("\n📡 Connecting to production database...")
-        production_data = fetch_production_data(HF_API_PREDICTIONS_ENDPOINT, API_KEY)
+        production_data = fetch_production_data(API_KEY)
 
         if production_data.empty:
             logger.warning("⚠️ No production data available for drift analysis")
