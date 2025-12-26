@@ -59,9 +59,9 @@ WEATHER_CONDITIONS = [
 # === Valeurs par défaut réalistes ===
 DEFAULT_VALUES = {
     "time_norm": 0.5,
-    "distance": 20.0,
-    "angle": 0.0,
-    "wind_speed": 10.0,
+    "distance": 30.0,
+    "angle": 40.0,
+    "wind_speed": 5.0,
     "precipitation_probability": 0.2,
     "is_left_footed": False,
     "game_away": False,
@@ -73,11 +73,11 @@ DEFAULT_VALUES = {
 
 # === Plages de champs ===
 FIELD_RANGES = {
-    "time_norm": (0.0, 1.0, 0.05),
-    "distance": (0.0, 60.0, 1.0),
-    "angle": (-90.0, 90.0, 1.0),
+    "time_norm": (0.01, 1.0, 0.01),
+    "distance": (2.0, 100.0, 1.0),
+    "angle": (0.0, 90.0, 1.0),
     "wind_speed": (0.0, 50.0, 1.0),
-    "precipitation_probability": (0.0, 1.0, 0.1),
+    "precipitation_probability": (0.0, 1.0, 0.01),
 }
 
 

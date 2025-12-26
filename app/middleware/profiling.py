@@ -51,6 +51,7 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
         top_results: int = 10,
         save_binary: bool = True,
         exclude_paths: list[str] | None = None,
+        include_only_prefix: str | None = None,
     ):
         """Initialize the profiling middleware.
 
@@ -59,11 +60,13 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
             top_results: Number of top functions to display in stats (default: 10)
             save_binary: Whether to save binary .prof files (default: True)
             exclude_paths: List of paths to exclude from profiling (default: ["/health"])
+            include_only_prefix: If set, only profile paths starting with this prefix (e.g., "/api")
         """
         super().__init__(app)
         self.top_results = top_results
         self.save_binary = save_binary
         self.exclude_paths = exclude_paths or ["/health", "/api/v1/health"]
+        self.include_only_prefix = include_only_prefix
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Profile the request and log performance statistics.
@@ -75,9 +78,17 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
         Returns:
             The HTTP response
         """
-        # Skip profiling for excluded paths
-        if request.url.path in self.exclude_paths:
-            return await call_next(request)
+        request_path = request.url.path
+
+        # If include_only_prefix is set, only profile paths with that prefix
+        if self.include_only_prefix:
+            if not request_path.startswith(self.include_only_prefix):
+                return await call_next(request)
+
+        # Skip profiling for excluded paths (exact match or prefix)
+        for excluded in self.exclude_paths:
+            if request_path == excluded or request_path.startswith(excluded + "/"):
+                return await call_next(request)
 
         # Skip profiling if X-Skip-Profiling header is present
         if request.headers.get("X-Skip-Profiling"):

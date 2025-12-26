@@ -66,8 +66,14 @@ def create_app() -> FastAPI:
 
     # Add profiling middleware (only in debug mode, not in tests)
     if settings.debug and not os.getenv("TESTING"):
-        app.add_middleware(ProfilingMiddleware, top_results=50, save_binary=True)
-        logger.info("🔍 Profiling middleware enabled (debug mode)")
+        # Only profile API endpoints, not Gradio UI
+        app.add_middleware(
+            ProfilingMiddleware,
+            top_results=50,
+            save_binary=True,
+            include_only_prefix="/api",  # Profile only /api/* endpoints
+        )
+        logger.info("🔍 Profiling middleware enabled (API endpoints only)")
 
     # Include routers
     app.include_router(health.router, prefix=settings.api_prefix)
