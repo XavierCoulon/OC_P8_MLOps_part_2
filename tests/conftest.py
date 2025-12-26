@@ -1,5 +1,6 @@
 """Pytest configuration and shared fixtures."""
 
+import os
 import sys
 from typing import Generator
 from unittest.mock import MagicMock
@@ -8,6 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
+
+# Disable profiling in tests
+os.environ["TESTING"] = "true"
+# Set API key for tests
+os.environ["API_KEY"] = "test-api-key-12345"
 
 # Mock psutil BEFORE any app imports
 psutil_mock = MagicMock()
@@ -19,6 +26,12 @@ sys.modules["psutil"] = psutil_mock
 
 # Now safe to import app modules
 from app.config.settings import Settings  # noqa: E402
+from app.ml.model_manager import model_manager  # noqa: E402
+
+# Configure model_manager for tests
+model_manager.initialized = True
+model_manager.model_name = "test-model"
+model_manager._model = MagicMock()
 
 test_settings = Settings(
     app_name="Rugby MLOps Test",
@@ -34,6 +47,7 @@ test_settings = Settings(
 test_engine = create_engine(
     test_settings.database_url,
     connect_args={"check_same_thread": False},
+    poolclass=NullPool,  # Don't pool connections in tests
 )
 
 # Import database module and override settings
@@ -75,12 +89,15 @@ def test_session_local():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_db(test_session_local) -> Generator[Session, None, None]:
     """Create test database session."""
     connection = test_engine.connect()
     transaction = connection.begin()
     session = test_session_local(bind=connection)
+
+    # Create tables for this test
+    Base.metadata.create_all(bind=connection)
 
     yield session
 

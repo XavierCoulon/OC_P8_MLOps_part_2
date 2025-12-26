@@ -80,19 +80,17 @@ def get_prediction_input(
 
 
 def list_prediction_inputs(
-    session: Session, skip: int = 0, limit: int = 100
+    session: Session,
 ) -> list[PredictionInput]:
     """List all prediction inputs with pagination.
 
     Args:
         session: Database session
-        skip: Number of records to skip
-        limit: Maximum number of records to return
 
     Returns:
         List of PredictionInput records
     """
-    return session.query(PredictionInput).offset(skip).limit(limit).all()
+    return session.query(PredictionInput).all()
 
 
 def delete_prediction_input(session: Session, prediction_id: int) -> bool:
@@ -111,7 +109,7 @@ def delete_prediction_input(session: Session, prediction_id: int) -> bool:
         .first()
     )
 
-    if db_prediction:
+    if db_prediction is not None:
         session.delete(db_prediction)
         session.commit()
         return True

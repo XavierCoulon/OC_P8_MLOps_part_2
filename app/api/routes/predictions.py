@@ -53,6 +53,7 @@ async def predict_kick(
 async def get_prediction(
     prediction_id: int,
     session: SessionDep,
+    _: str = Depends(verify_api_key),
 ):
     """Get a specific prediction record.
 
@@ -64,7 +65,7 @@ async def get_prediction(
         Prediction record or 404 if not found
     """
     db_prediction = get_prediction_input(session, prediction_id)
-    if not db_prediction:
+    if db_prediction is None:
         raise HTTPException(status_code=404, detail="Prediction not found")
     return db_prediction
 
@@ -72,20 +73,17 @@ async def get_prediction(
 @router.get("/predictions", response_model=list[PredictionInputResponse])
 async def list_predictions(
     session: SessionDep,
-    skip: int = 0,
-    limit: int = 1000,
+    _: str = Depends(verify_api_key),
 ):
     """List all prediction records.
 
     Args:
-        skip: Number of records to skip
-        limit: Maximum number of records to return
         session: Database session
 
     Returns:
         List of prediction records
     """
-    predictions = list_prediction_inputs(session, skip=skip, limit=limit)
+    predictions = list_prediction_inputs(session)
     return predictions
 
 
@@ -93,6 +91,7 @@ async def list_predictions(
 async def delete_prediction(
     prediction_id: int,
     session: SessionDep,
+    _: str = Depends(verify_api_key),
 ):
     """Delete a prediction record.
 

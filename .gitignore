@@ -54,6 +54,7 @@ htmlcov/
 # Logging
 *.log
 app.log
+profiles/
 
 # FastAPI and Uvicorn
 .uvicorn_cache/
@@ -65,3 +66,6 @@ Thumbs.db
 # Project specific
 .env
 .env.local
+
+# Data folders
+data/
