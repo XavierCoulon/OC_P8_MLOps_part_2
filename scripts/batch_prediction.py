@@ -21,8 +21,8 @@ if not API_KEY or API_KEY == "default-key-change-me":
     exit()
 
 DATA_FILE = "data/kicks_ready_for_model.csv"
-BATCH_SIZE = 50
-API_PAUSE_SECONDS = 1  # Pause entre les requêtes pour éviter d'être banni
+BATCH_SIZE = 1000
+API_PAUSE_SECONDS = 0.5  # Pause entre les requêtes pour éviter d'être banni
 
 if not os.path.exists(DATA_FILE):
     print(f"❌ Erreur : Le fichier {DATA_FILE} est introuvable.")
