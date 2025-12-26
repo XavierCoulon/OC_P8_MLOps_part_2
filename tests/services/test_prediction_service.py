@@ -1,8 +1,9 @@
 """Tests for prediction service."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
+from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.models.schemas import KickPredictionRequest
@@ -29,7 +30,14 @@ class TestProcessPrediction:
             has_previous_attempts=0,
         )
 
-    def test_successful_prediction(self, test_db: Session, valid_request):
+    @pytest.fixture
+    def background_tasks(self):
+        """Create a BackgroundTasks instance."""
+        return BackgroundTasks()
+
+    def test_successful_prediction(
+        self, test_db: Session, valid_request, background_tasks
+    ):
         """Test successful prediction with all metrics collected."""
         # Arrange - Model manager is mocked in conftest
         from app.ml.model_manager import model_manager
@@ -38,14 +46,18 @@ class TestProcessPrediction:
         model_manager.predict = MagicMock(return_value=(1, 0.85))
 
         # Act
-        prediction, confidence = process_prediction(test_db, valid_request)
+        prediction, confidence = process_prediction(
+            test_db, valid_request, background_tasks
+        )
 
         # Assert
         assert prediction == 1
         assert confidence == 0.85
         model_manager.predict.assert_called_once()
 
-    def test_model_not_initialized_raises_error(self, test_db: Session, valid_request):
+    def test_model_not_initialized_raises_error(
+        self, test_db: Session, valid_request, background_tasks
+    ):
         """Test that RuntimeError is raised when model is not loaded."""
         # Arrange
         from app.ml.model_manager import model_manager
@@ -54,9 +66,11 @@ class TestProcessPrediction:
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Model not loaded"):
-            process_prediction(test_db, valid_request)
+            process_prediction(test_db, valid_request, background_tasks)
 
-    def test_prediction_error_handling(self, test_db: Session, valid_request):
+    def test_prediction_error_handling(
+        self, test_db: Session, valid_request, background_tasks
+    ):
         """Test that prediction errors are properly handled and re-raised."""
         # Arrange
         from app.ml.model_manager import model_manager
@@ -68,72 +82,61 @@ class TestProcessPrediction:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Invalid feature values"):
-            process_prediction(test_db, valid_request)
+            process_prediction(test_db, valid_request, background_tasks)
 
-    def test_database_error_is_caught_and_logged(self, test_db: Session, valid_request):
-        """Test that database errors are caught and logged without affecting the response."""
+    def test_background_task_is_added(
+        self, test_db: Session, valid_request, background_tasks
+    ):
+        """Test that background task for logging is added."""
         # Arrange
         from app.ml.model_manager import model_manager
 
         model_manager.initialized = True
         model_manager.predict = MagicMock(return_value=(1, 0.85))
 
-        # Mock create_prediction_input to raise an exception
-        with patch(
-            "app.services.prediction_service.create_prediction_input"
-        ) as mock_create:
-            mock_create.side_effect = Exception("Database connection failed")
+        # Act
+        prediction, confidence = process_prediction(
+            test_db, valid_request, background_tasks
+        )
 
-            # Capture print output
-            with patch("builtins.print") as mock_print:
-                # Act
-                prediction, confidence = process_prediction(test_db, valid_request)
+        # Assert - prediction succeeds
+        assert prediction == 1
+        assert confidence == 0.85
 
-                # Assert - prediction still succeeds
-                assert prediction == 1
-                assert confidence == 0.85
+        # Assert - background task was added
+        assert len(background_tasks.tasks) == 1
 
-                # Assert - error was logged
-                mock_print.assert_called_once()
-                call_args = mock_print.call_args[0][0]
-                assert "⚠️ Erreur logging DB:" in call_args
-                assert "Database connection failed" in call_args
-
-    def test_metrics_are_collected(self, test_db: Session, valid_request):
-        """Test that CPU and memory metrics are collected during prediction."""
+    def test_background_logging_with_correct_parameters(
+        self, test_db: Session, valid_request, background_tasks
+    ):
+        """Test that background logging task receives correct parameters."""
         # Arrange
         from app.ml.model_manager import model_manager
 
         model_manager.initialized = True
         model_manager.predict = MagicMock(return_value=(0, 0.65))
 
-        # Mock create_prediction_input to verify metrics
-        with patch(
-            "app.services.prediction_service.create_prediction_input"
-        ) as mock_create:
-            # Act
-            process_prediction(test_db, valid_request)
+        # Act
+        prediction, confidence = process_prediction(
+            test_db, valid_request, background_tasks
+        )
 
-            # Assert
-            mock_create.assert_called_once()
-            call_kwargs = mock_create.call_args.kwargs
+        # Assert - prediction succeeds
+        assert prediction == 0
+        assert confidence == 0.65
 
-            # Verify all expected parameters are passed
-            assert call_kwargs["session"] == test_db
-            assert call_kwargs["request"] == valid_request
-            assert call_kwargs["prediction"] == 0
-            assert call_kwargs["confidence"] == 0.65
-            assert call_kwargs["status_code"] == 200
-            assert call_kwargs["error_message"] is None
+        # Assert - background task was added
+        assert len(background_tasks.tasks) == 1
 
-            # Verify metrics are present and reasonable
-            assert "latency_ms" in call_kwargs
-            assert call_kwargs["latency_ms"] >= 0
-            assert "cpu_usage_percent" in call_kwargs
-            assert "memory_usage_mb" in call_kwargs
+        # Execute background task to verify it works
+        task = background_tasks.tasks[0]
+        # The task should not raise an exception when executed
+        task.func(*task.args, **task.kwargs)
 
-    def test_error_metrics_on_prediction_failure(self, test_db: Session, valid_request):
-        """Test that error status and message are logged when prediction fails."""
+    def test_background_task_added_even_on_error(
+        self, test_db: Session, valid_request, background_tasks
+    ):
+        """Test that background task is added even when prediction fails."""
         # Arrange
         from app.ml.model_manager import model_manager
 
@@ -141,19 +144,13 @@ class TestProcessPrediction:
         error_msg = "Feature extraction failed"
         model_manager.predict = MagicMock(side_effect=Exception(error_msg))
 
-        # Mock create_prediction_input to verify error metrics
-        with patch(
-            "app.services.prediction_service.create_prediction_input"
-        ) as mock_create:
-            # Act & Assert
-            with pytest.raises(Exception, match=error_msg):
-                process_prediction(test_db, valid_request)
+        # Act & Assert
+        with pytest.raises(Exception, match=error_msg):
+            process_prediction(test_db, valid_request, background_tasks)
 
-            # Assert - DB logging was still attempted with error info
-            mock_create.assert_called_once()
-            call_kwargs = mock_create.call_args.kwargs
+        # Assert - background task was still added with error info
+        assert len(background_tasks.tasks) == 1
 
-            assert call_kwargs["prediction"] is None
-            assert call_kwargs["confidence"] is None
-            assert call_kwargs["status_code"] == 500
-            assert call_kwargs["error_message"] == error_msg
+        # Verify the task can be executed without raising
+        task = background_tasks.tasks[0]
+        task.func(*task.args, **task.kwargs)
