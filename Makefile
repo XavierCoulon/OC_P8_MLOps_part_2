@@ -1,5 +1,5 @@
 # Development commands
-.PHONY: up down rebuild precommit test coverage ui batch evaluate
+.PHONY: up down rebuild precommit test coverage ui batch evaluate run-local
 
 # Docker commands
 up:
@@ -36,3 +36,8 @@ batch:
 # Evaluate data drift
 evaluate:
 	python scripts/evaluate_drift.py
+
+# Run app locally with profiling (uses .env.local)
+run-local:
+	@export $$(cat .env.local | grep -v '^#' | xargs) && \
+	python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

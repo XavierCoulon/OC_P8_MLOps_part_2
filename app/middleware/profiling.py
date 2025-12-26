@@ -17,8 +17,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 profiling_logger = logging.getLogger("profiling")
 profiling_logger.setLevel(logging.INFO)
 
+# Determine profiles directory based on environment
+# In Docker: /app exists and is writable
+# In local: use ./profiles relative to project root
+if Path("/app").exists() and os.access("/app", os.W_OK):
+    # Running in Docker container
+    PROFILES_DIR = Path("/app/profiles")
+else:
+    # Running locally - use relative path from project root
+    PROFILES_DIR = Path(__file__).parent.parent.parent / "profiles"
+
 # Create profiles directory only if not in test mode
-PROFILES_DIR = Path("/app/profiles")
 if not os.getenv("TESTING"):
     PROFILES_DIR.mkdir(exist_ok=True, parents=True)
 

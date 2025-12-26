@@ -67,5 +67,9 @@ Thumbs.db
 .env
 .env.local
 
+# Database files
+*.db
+*.db-journal
+
 # Data folders
 data/

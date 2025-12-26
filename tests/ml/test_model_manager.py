@@ -41,9 +41,9 @@ class TestModelManager:
         manager = ModelManager()
         manager.initialized = True
 
-        # Mock model that raises exception during predict
+        # Mock model that raises exception during predict_proba
         mock_model = MagicMock()
-        mock_model.predict.side_effect = Exception("Prediction error")
+        mock_model.predict_proba.side_effect = Exception("Prediction error")
         manager._model = mock_model
 
         with pytest.raises(Exception, match="Prediction error"):
