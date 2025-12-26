@@ -22,23 +22,23 @@ class KickPredictionRequest(BaseModel):
         description="Normalized time in match (0.01 - 1.00)",
         examples=[0.25, 0.5, 0.75],
     )
-    distance: int = Field(
+    distance: float = Field(
         ge=2,
-        le=65,
-        description="Distance to goal in meters (2 - 65)",
-        examples=[15, 30, 50],
+        le=100,
+        description="Distance to goal in meters (2 - 100)",
+        examples=[15.0, 30.0, 50.0, 80.0],
     )
-    angle: int = Field(
+    angle: float = Field(
         ge=0,
-        le=180,
-        description="Angle to goal in degrees (0 - 180)",
-        examples=[0, 30, 45, 70],
+        le=90,
+        description="Angle to goal in degrees (0 - 90)",
+        examples=[0.0, 30.0, 45.0, 70.0, 90.0],
     )
     wind_speed: float = Field(
         ge=0.00,
-        le=18.17,
-        description="Wind speed in km/h (0.00 - 18.17)",
-        examples=[0.0, 5.2, 10.5, 18.0],
+        le=50.00,
+        description="Wind speed in km/h (0.00 - 50.00)",
+        examples=[0.0, 5.2, 10.5, 25.0, 40.0],
     )
     precipitation_probability: float = Field(
         ge=0.00,
