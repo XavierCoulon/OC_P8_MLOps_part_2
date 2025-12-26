@@ -6,6 +6,7 @@ import argparse
 import logging
 
 import gradio as gr
+from fastapi import BackgroundTasks
 
 from app.config.settings import settings
 from app.db.database import _get_session_local
@@ -135,8 +136,15 @@ def predict_from_ui(**kwargs) -> tuple[str, str]:
         # Conversion en Pydantic (validation gratuite !)
         request = KickPredictionRequest(**kwargs)
 
+        # Création d'un BackgroundTasks pour Gradio
+        background_tasks = BackgroundTasks()
+
         # Appel du service partagé
-        prediction, confidence = process_prediction(session, request)
+        prediction, confidence = process_prediction(session, request, background_tasks)
+
+        # Exécution manuelle des tâches background (Gradio n'a pas de loop FastAPI)
+        for task in background_tasks.tasks:
+            task.func(*task.args, **task.kwargs)
 
         return f"{prediction:.4f}", f"{confidence:.4f}"
 
