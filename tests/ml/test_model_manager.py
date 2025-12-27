@@ -10,6 +10,30 @@ from app.ml.model_manager import ModelManager
 class TestModelManager:
     """Test suite for ModelManager class."""
 
+    @pytest.fixture(autouse=True)
+    def reset_model_manager(self):
+        """Reset model_manager singleton before each test."""
+        manager = ModelManager()
+        # Store original state
+        original_predict = manager.predict
+        original_initialized = manager.initialized
+        original_session = getattr(manager, "_session", None)
+
+        # Reset for test
+        manager.initialized = False
+        manager._session = None
+        # Remove the mock from conftest if present
+        if hasattr(manager.predict, "_mock_name"):
+            # Restore original method by getting it from class
+            manager.predict = ModelManager.predict.__get__(manager, ModelManager)
+
+        yield
+
+        # Restore original state after test
+        manager.predict = original_predict
+        manager.initialized = original_initialized
+        manager._session = original_session
+
     def test_model_manager_singleton(self):
         """Test that ModelManager follows singleton pattern."""
         manager1 = ModelManager()
@@ -31,7 +55,6 @@ class TestModelManager:
         """Test that predict raises ValueError when model not loaded."""
         manager = ModelManager()
         manager.initialized = False
-        manager._model = None
 
         with pytest.raises(ValueError, match="Model not loaded"):
             manager.predict({"distance": 30, "angle": 15})
@@ -41,10 +64,10 @@ class TestModelManager:
         manager = ModelManager()
         manager.initialized = True
 
-        # Mock model that raises exception during predict_proba
-        mock_model = MagicMock()
-        mock_model.predict_proba.side_effect = Exception("Prediction error")
-        manager._model = mock_model
+        # Mock ONNX session that raises exception during run
+        mock_session = MagicMock()
+        mock_session.run.side_effect = Exception("Prediction error")
+        manager._session = mock_session
 
         with pytest.raises(Exception, match="Prediction error"):
             manager.predict({"distance": 30, "angle": 15})

@@ -28,10 +28,14 @@ sys.modules["psutil"] = psutil_mock
 from app.config.settings import Settings  # noqa: E402
 from app.ml.model_manager import model_manager  # noqa: E402
 
-# Configure model_manager for tests
+# Configure model_manager for tests (ONNX Runtime)
 model_manager.initialized = True
 model_manager.model_name = "test-model"
-model_manager._model = MagicMock()
+# Mock ONNX session instead of scikit-learn model
+mock_session = MagicMock()
+model_manager._session = mock_session
+# Mock the predict method to return test predictions
+model_manager.predict = MagicMock(return_value=(1, 0.85))
 
 test_settings = Settings(
     app_name="Rugby MLOps Test",

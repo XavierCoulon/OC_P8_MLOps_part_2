@@ -1,28 +1,20 @@
-"""Model manager optimized for Low Latency inference (Fast Pandas)."""
+"""Model manager optimized for Low Latency inference with ONNX Runtime."""
 
 import logging
-import warnings
 from typing import Optional
 
-import joblib
-import pandas as pd
+import numpy as np
+import onnxruntime as ort
 from huggingface_hub import hf_hub_download
-
-# Suppress scikit-learn feature names warning
-warnings.filterwarnings(
-    "ignore",
-    message="X does not have valid feature names",
-    category=UserWarning,
-)
 
 logger = logging.getLogger(__name__)
 
 
 class ModelManager:
-    """Manager for ML model loading and inference using joblib."""
+    """Manager for ML model loading and inference using ONNX Runtime."""
 
     _instance: Optional["ModelManager"] = None
-    _model = None
+    _session = None
 
     # Défini une seule fois pour éviter la reconstruction à chaque appel
     # C'est l'ordre EXACT attendu par ton modèle (ColumnTransformer)
@@ -53,29 +45,40 @@ class ModelManager:
             self.model_name = None
 
     def load_model(self, hf_repo_id: str) -> None:
-        """Load model from Hugging Face Hub."""
+        """Load ONNX model from Hugging Face Hub."""
         if self.initialized and self.model_name == hf_repo_id:
             logger.info(f"Model {hf_repo_id} already loaded")
             return
 
-        logger.info(f"🌐 Downloading model from Hugging Face Hub ({hf_repo_id})...")
+        logger.info(f"🌐 Downloading ONNX model from Hugging Face Hub ({hf_repo_id})...")
         try:
             model_path = hf_hub_download(
                 repo_id=hf_repo_id,
-                filename="model.pkl",
+                filename="model.onnx",
             )
 
-            self._model = joblib.load(model_path)
+            # Create ONNX Runtime session with optimizations
+            sess_options = ort.SessionOptions()
+            sess_options.graph_optimization_level = (
+                ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            )
+
+            self._session = ort.InferenceSession(
+                model_path,
+                sess_options=sess_options,
+                providers=["CPUExecutionProvider"],
+            )
+
             self.model_name = hf_repo_id
             self.initialized = True
-            logger.info("✅ Model downloaded and loaded (Optimized Pandas Mode).")
+            logger.info("✅ ONNX model downloaded and loaded (Optimized ONNX Runtime).")
 
         except Exception as e:
             logger.error(f"❌ Failed to download model: {e}")
             raise RuntimeError("Unable to load ML model.") from e
 
     def predict(self, features: dict) -> tuple[float, float]:
-        """Make prediction using Optimized DataFrame construction.
+        """Make prediction using ONNX Runtime.
 
         Args:
             features: Dictionary with model features
@@ -86,28 +89,33 @@ class ModelManager:
         Raises:
             ValueError: If model is not initialized
         """
-        if not self.initialized or self._model is None:
+        if not self.initialized or self._session is None:
             raise ValueError("Model not loaded. Call load_model() first.")
 
         try:
-            # --- OPTIMISATION 1 : Fast Pandas Construction ---
-            # Au lieu de pd.DataFrame([features]), qui est lent car il analyse les clés,
-            # on extrait les valeurs dans une liste et on spécifie les colonnes.
-            # C'est la méthode la plus rapide pour créer un DataFrame compatible Sklearn.
+            # --- OPTIMISATION : Préparer les inputs pour ONNX ---
+            # Le modèle ONNX attend chaque feature comme input séparé
+            # Conversion en float32 pour compatibilité ONNX
+            input_feed = {
+                feature: np.array([[features.get(feature, 0)]], dtype=np.float32)
+                for feature in self.FEATURE_ORDER
+            }
 
-            data_values = [features.get(f, 0) for f in self.FEATURE_ORDER]
-            input_df = pd.DataFrame([data_values], columns=self.FEATURE_ORDER)
+            # --- ONNX Runtime Inference ---
+            # Exécution de l'inférence avec le dictionnaire d'inputs
+            outputs = self._session.run(None, input_feed)
 
-            # --- OPTIMISATION 2 : Single Inference Call ---
-            # On appelle UNIQUEMENT predict_proba.
-            # Cela évite de parcourir les arbres de décision deux fois (predict + predict_proba).
+            # Format ONNX: [label, [{0: prob_class_0, 1: prob_class_1}]]
+            # outputs[1] est une liste contenant un dict de probabilités
+            probas_dict = outputs[1][0]  # {0: 0.54, 1: 0.46}
 
-            probas = self._model.predict_proba(input_df)[0]
+            # Extraire les probabilités dans un array
+            probas = np.array([probas_dict[0], probas_dict[1]])
 
             # La classe prédite est l'index de la proba max (0 ou 1)
-            prediction = int(probas.argmax())
+            prediction = int(np.argmax(probas))
             # La confiance est la valeur max
-            confidence = float(probas.max())
+            confidence = float(np.max(probas))
 
             return prediction, confidence
 
