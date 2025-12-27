@@ -57,16 +57,15 @@ jobs:
                   images: ${{ secrets.DOCKER_USERNAME }}/rugby-mlops
                   tags: |
                       type=ref,event=branch
-                      type=semver,pattern={{version}}
-                      type=semver,pattern={{major}}.{{minor}}
-                      type=sha,prefix={{branch}}-
+                      type=raw,value=latest,enable={{is_default_branch}}
+                      type=sha,prefix=sha-
 
             - name: Build and push to Docker Hub
               uses: docker/build-push-action@v5
               timeout-minutes: 60
               with:
                   context: .
-                  push: true
+                  push: ${{ github.event_name != 'pull_request' }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
                   cache-from: type=gha
