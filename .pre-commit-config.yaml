@@ -50,3 +50,4 @@ repos:
                 - uvicorn
                 - psycopg
                 - huggingface-hub
+                - onnxruntime

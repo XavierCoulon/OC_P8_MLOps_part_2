@@ -31,7 +31,6 @@ class TestModelManager:
         """Test that predict raises ValueError when model not loaded."""
         manager = ModelManager()
         manager.initialized = False
-        manager._model = None
 
         with pytest.raises(ValueError, match="Model not loaded"):
             manager.predict({"distance": 30, "angle": 15})
@@ -41,10 +40,10 @@ class TestModelManager:
         manager = ModelManager()
         manager.initialized = True
 
-        # Mock model that raises exception during predict_proba
-        mock_model = MagicMock()
-        mock_model.predict_proba.side_effect = Exception("Prediction error")
-        manager._model = mock_model
+        # Mock ONNX session that raises exception during run
+        mock_session = MagicMock()
+        mock_session.run.side_effect = Exception("Prediction error")
+        manager._session = mock_session
 
         with pytest.raises(Exception, match="Prediction error"):
             manager.predict({"distance": 30, "angle": 15})
