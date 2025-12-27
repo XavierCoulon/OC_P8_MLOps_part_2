@@ -1,5 +1,5 @@
 # Development commands
-.PHONY: up down rebuild precommit test coverage ui batch evaluate run-local
+.PHONY: up down rebuild precommit test coverage ui batch batch-drift evaluate run-local
 
 # Docker commands
 up:
@@ -31,7 +31,11 @@ ui:
 
 # Send batch predictions to API
 batch:
-	python scripts/batch_prediction.py
+	python scripts/batch_prediction.py --batch-size $(or $(BATCH_SIZE),1000)
+
+# Send batch predictions with distance drift (distance > 40m)
+batch-drift:
+	python scripts/batch_prediction.py --batch-size 100 --distance-drift
 
 # Evaluate data drift
 evaluate:
