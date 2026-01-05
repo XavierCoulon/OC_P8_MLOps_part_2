@@ -22,6 +22,7 @@ def _get_engine():
     if _engine is None:
         _engine = create_engine(
             settings.database_url,
+            pool_pre_ping=True,
             echo=settings.debug,
         )
     return _engine
